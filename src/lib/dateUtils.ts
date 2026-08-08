@@ -99,3 +99,65 @@ export function getWeekDatesFromStartDate(startDateStr: string) {
   }
   return getWeekDates();
 }
+
+/**
+ * Standard daily school routine template pre-filled with times (13:00 - 17:15)
+ */
+export const DEFAULT_SCHOOL_ROUTINE = [
+  {
+    time: '13:00 – 13:20',
+    title: 'ROTINA / ACOLHIDA',
+    description: '- Higienização: Banheiro e encher as garrafas com água.\n- Rotina: Chamada, calendário, tempo, quantos somos.\n- Devocional.',
+    order: 1
+  },
+  {
+    time: '13:20 – 14:10',
+    title: 'CONTAÇÃO DE HISTÓRIA / AULA DIRIGIDA',
+    description: 'Momento de acolhimento em roda e introdução do tema pedagógico da semana.',
+    order: 2
+  },
+  {
+    time: '14:10 – 14:40',
+    title: 'LANCHE / HIGIENE',
+    description: 'Momento da refeição e higienização das mãos.',
+    order: 3
+  },
+  {
+    time: '14:40 – 15:30',
+    title: 'AULA BILÍNGUE',
+    description: 'Atividades lúdicas e vivências na segunda língua.',
+    order: 4
+  },
+  {
+    time: '15:30 – 16:20',
+    title: 'AULA ESPORTIVA / ARTES / MUSICALIZAÇÃO',
+    description: 'Atividades manuais, corporeidade e expressão plástica ou sonora.',
+    order: 5
+  },
+  {
+    time: '16:20 – 16:40',
+    title: 'FRUTA / HIGIENE',
+    description: 'Intervalo da fruta e uso do banheiro.',
+    order: 6
+  },
+  {
+    time: '16:40 – 17:15',
+    title: 'ATIVIDADE RECREATIVA / PARQUE',
+    description: 'Brincadeira livre ou dirigida no parquinho.',
+    order: 7
+  },
+  {
+    time: '17:15',
+    title: 'SAÍDA',
+    description: 'Organização das mochilas e recepção dos pais ou responsáveis.',
+    order: 8
+  }
+];
+
+export function buildDefaultRoutineForDay(dayPrefix: string) {
+  return DEFAULT_SCHOOL_ROUTINE.map((item, idx) => ({
+    id: `r-${dayPrefix}-${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
+    ...item
+  }));
+}
+

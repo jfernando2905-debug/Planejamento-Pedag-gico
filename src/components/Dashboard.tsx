@@ -31,6 +31,7 @@ interface DashboardProps {
   onOpenAiAssistant: () => void;
   onOpenSettings: () => void;
   onSelectPlanning: (planning: WeeklyPlanning) => void;
+  onNewPlanning?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -44,9 +45,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenAiAssistant,
   onOpenSettings,
   onSelectPlanning,
+  onNewPlanning,
 }) => {
 
   const recentPlannings = plannings.slice(0, 3);
+
+  const handleCreateNew = () => {
+    if (onNewPlanning) {
+      onNewPlanning();
+    } else {
+      setActiveTab('novo-planejamento');
+    }
+  };
 
   const modules = [
     {
@@ -57,7 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       color: 'from-emerald-500 to-teal-600',
       textColor: 'text-emerald-700 dark:text-emerald-300',
       badge: 'Principal',
-      action: () => setActiveTab('novo-planejamento')
+      action: handleCreateNew
     },
     {
       id: 'planejamentos',
@@ -161,7 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="flex flex-wrap items-center gap-3">
             <button
               id="dash-hero-new-btn"
-              onClick={() => setActiveTab('novo-planejamento')}
+              onClick={handleCreateNew}
               className="px-5 py-3 rounded-2xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-sm shadow-lg shadow-black/10 flex items-center gap-2 transition-transform active:scale-95"
             >
               <PlusCircle className="w-5 h-5 text-emerald-600" />

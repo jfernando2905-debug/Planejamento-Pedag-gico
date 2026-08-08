@@ -35,6 +35,7 @@ interface SidebarProps {
   setDarkMode: (val: boolean) => void;
   installPrompt: any;
   onInstallPwa: () => void;
+  onNewPlanning?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -50,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setDarkMode,
   installPrompt,
   onInstallPwa,
+  onNewPlanning,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -76,7 +78,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const handleSelectTab = (tabId: string) => {
-    setActiveTab(tabId);
+    if (tabId === 'novo-planejamento' && onNewPlanning) {
+      onNewPlanning();
+    } else {
+      setActiveTab(tabId);
+    }
     setMobileOpen(false);
   };
 

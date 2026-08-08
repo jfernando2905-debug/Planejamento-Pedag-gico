@@ -44,7 +44,7 @@ import { AiAssistantModal } from './components/AiAssistantModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { PwaReloadPrompt } from './components/PwaReloadPrompt';
 import { LoginGate } from './components/LoginGate';
-import { getWeekDates } from './lib/dateUtils';
+import { getWeekDates, buildDefaultRoutineForDay } from './lib/dateUtils';
 import { WifiOff } from 'lucide-react';
 
 export default function App() {
@@ -325,7 +325,7 @@ export default function App() {
     }
   };
 
-  // New Fresh Planning Creation with automated ISO week and Monday-Friday dates
+  // New Fresh Planning Creation with pre-filled routines and schedules (13:00 to 17:15)
   const handleCreateNewPlanning = () => {
     const weekData = getWeekDates();
     const newPlanning: WeeklyPlanning = {
@@ -339,20 +339,62 @@ export default function App() {
       week: weekData.weekLabel,
       startDate: weekData.startDateIso,
       endDate: weekData.endDateIso,
-      generalTheme: 'Novo Tema Geral',
+      generalTheme: 'Planejamento Semanal Pedagógico',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       days: {
-        segunda: { dayName: 'Segunda-feira', dateStr: weekData.daysDdMm.segunda, routine: [], lessons: [] },
-        terca: { dayName: 'Terça-feira', dateStr: weekData.daysDdMm.terca, routine: [], lessons: [] },
-        quarta: { dayName: 'Quarta-feira', dateStr: weekData.daysDdMm.quarta, routine: [], lessons: [] },
-        quinta: { dayName: 'Quinta-feira', dateStr: weekData.daysDdMm.quinta, routine: [], lessons: [] },
-        sexta: { dayName: 'Sexta-feira', dateStr: weekData.daysDdMm.sexta, routine: [], lessons: [] }
+        segunda: { 
+          dayName: 'Segunda-feira', 
+          dateStr: weekData.daysDdMm.segunda, 
+          subHeader: 'PEDAGÓGICA', 
+          routine: buildDefaultRoutineForDay('seg'), 
+          lessons: [] 
+        },
+        terca: { 
+          dayName: 'Terça-feira', 
+          dateStr: weekData.daysDdMm.terca, 
+          subHeader: 'PEDAGÓGICA', 
+          routine: buildDefaultRoutineForDay('ter'), 
+          lessons: [] 
+        },
+        quarta: { 
+          dayName: 'Quarta-feira', 
+          dateStr: weekData.daysDdMm.quarta, 
+          subHeader: 'PEDAGÓGICA', 
+          routine: buildDefaultRoutineForDay('qua'), 
+          lessons: [] 
+        },
+        quinta: { 
+          dayName: 'Quinta-feira', 
+          dateStr: weekData.daysDdMm.quinta, 
+          subHeader: 'PEDAGÓGICA', 
+          routine: buildDefaultRoutineForDay('qui'), 
+          lessons: [] 
+        },
+        sexta: { 
+          dayName: 'Sexta-feira', 
+          dateStr: weekData.daysDdMm.sexta, 
+          subHeader: 'PEDAGÓGICA', 
+          routine: buildDefaultRoutineForDay('sex'), 
+          lessons: [] 
+        }
       }
     };
-    setPlannings([newPlanning, ...plannings]);
+    
+    // Set active draft without adding to saved plannings until explicitly saved
     setCurrentPlanning(newPlanning);
     setActiveTab('novo-planejamento');
+  };
+
+  // Discard local unsaved draft changes
+  const handleDiscardChanges = () => {
+    if (!currentPlanning) return;
+    const saved = plannings.find(p => p.id === currentPlanning.id);
+    if (saved) {
+      setCurrentPlanning(saved);
+    } else if (plannings.length > 0) {
+      setCurrentPlanning(plannings[0]);
+    }
   };
 
   // Loading Screen
@@ -415,6 +457,7 @@ export default function App() {
         setDarkMode={setDarkMode}
         installPrompt={installPrompt}
         onInstallPwa={handleInstallPwa}
+        onNewPlanning={handleCreateNewPlanning}
       />
 
       {/* Main App Canvas */}
@@ -435,6 +478,7 @@ export default function App() {
               setCurrentPlanning(p);
               setActiveTab('novo-planejamento');
             }}
+            onNewPlanning={handleCreateNewPlanning}
           />
         )}
 
@@ -443,8 +487,8 @@ export default function App() {
             currentPlanning={currentPlanning}
             onChangePlanning={(updated) => {
               setCurrentPlanning(updated);
-              setPlannings(plannings.map(p => p.id === updated.id ? updated : p));
             }}
+            onDiscardChanges={handleDiscardChanges}
             onSaveFirebase={handleSavePlanningFirebase}
             settings={settings}
             onOpenAiAssistant={() => setAiAssistantOpen(true)}

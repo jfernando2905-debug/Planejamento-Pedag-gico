@@ -32,7 +32,7 @@ import {
   ListChecks,
   RefreshCw
 } from 'lucide-react';
-import { getWeekDatesFromStartDate } from '../lib/dateUtils';
+import { getWeekDatesFromStartDate, buildDefaultRoutineForDay } from '../lib/dateUtils';
 import { 
   WeeklyPlanning, 
   DayPlanning, 
@@ -65,6 +65,7 @@ interface PlanningEditorProps {
   stories?: Story[];
   bibleLessons?: BibleLesson[];
   onClose?: () => void;
+  onDiscardChanges?: () => void;
 }
 
 const DAYS_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'] as const;
@@ -101,7 +102,8 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
   onSaveLessonToBank,
   stories = [],
   bibleLessons = [],
-  onClose
+  onClose,
+  onDiscardChanges
 }) => {
   const [activeDayKey, setActiveDayKey] = useState<DayKey>('segunda');
   const [bnccModalOpen, setBnccModalOpen] = useState(false);
@@ -458,14 +460,31 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
     }
   };
 
-  // Auto-save trigger
+  // Save status indicator sync
   useEffect(() => {
-    setSaveStatus('Alterações pendentes...');
-    const timer = setTimeout(() => {
-      setSaveStatus('Salvo localmente');
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [currentPlanning]);
+    if (isDirty) {
+      setSaveStatus('Alterações pendentes');
+    } else {
+      setSaveStatus('Salvo com sucesso');
+    }
+  }, [isDirty]);
+
+  // Fill default 13:00 - 17:15 school routine for active day
+  const handleFillDefaultRoutine = (dayKey: DayKey) => {
+    const dayObj = currentPlanning.days[dayKey] || {
+      dayName: DAY_LABELS[dayKey],
+      dateStr: '',
+      routine: [],
+      lessons: []
+    };
+    const defaultItems = buildDefaultRoutineForDay(dayKey.substring(0, 3));
+    updateDayField({
+      ...dayObj,
+      routine: defaultItems
+    });
+    setToastMessage(`Rotina padrão (13:00 às 17:15) preenchida para ${DAY_LABELS[dayKey]}!`);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
 
   // Update Top General Info
   const updateGeneralField = (field: keyof WeeklyPlanning, value: any) => {
@@ -998,19 +1017,38 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
                 </p>
               </div>
 
-              <button
-                id="add-routine-item-btn"
-                onClick={handleAddRoutine}
-                className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 font-semibold text-xs flex items-center gap-1 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Adicionar Item da Rotina</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  id="fill-default-routine-btn"
+                  onClick={() => handleFillDefaultRoutine(activeDayKey)}
+                  className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 font-semibold text-xs flex items-center gap-1.5 transition-colors border border-blue-200 dark:border-blue-800"
+                  title="Preencher com os horários e rotinas padrão da escola"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Carregar Rotina Padrão</span>
+                </button>
+
+                <button
+                  id="add-routine-item-btn"
+                  onClick={handleAddRoutine}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 font-semibold text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Item</span>
+                </button>
+              </div>
             </div>
 
             {currentDay.routine.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400">
-                Nenhum item na rotina deste dia. Clique no botão acima para adicionar.
+              <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-3 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                <p>Nenhum item de rotina cadastrado para este dia.</p>
+                <button
+                  onClick={() => handleFillDefaultRoutine(activeDayKey)}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Carregar Rotina e Horários Padrão (13:00 às 17:15)</span>
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1884,6 +1922,7 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
                 id="unsaved-modal-discard-btn"
                 onClick={() => {
                   setUnsavedModalOpen(false);
+                  onDiscardChanges?.();
                   onClose?.();
                 }}
                 className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors"
