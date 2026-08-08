@@ -29,8 +29,10 @@ import {
   FolderPlus,
   FolderDown,
   Search,
-  ListChecks
+  ListChecks,
+  RefreshCw
 } from 'lucide-react';
+import { getWeekDatesFromStartDate } from '../lib/dateUtils';
 import { 
   WeeklyPlanning, 
   DayPlanning, 
@@ -474,6 +476,35 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
     });
   };
 
+  // Recalculate and auto-populate week dates for Monday-Friday
+  const handleAutoRecalculateDates = (customStartDate?: string) => {
+    const refDateStr = customStartDate || currentPlanning.startDate;
+    const weekData = getWeekDatesFromStartDate(refDateStr);
+
+    const updatedDays = {
+      segunda: { ...currentPlanning.days.segunda, dateStr: weekData.daysDdMm.segunda },
+      terca: { ...currentPlanning.days.terca, dateStr: weekData.daysDdMm.terca },
+      quarta: { ...currentPlanning.days.quarta, dateStr: weekData.daysDdMm.quarta },
+      quinta: { ...currentPlanning.days.quinta, dateStr: weekData.daysDdMm.quinta },
+      sexta: { ...currentPlanning.days.sexta, dateStr: weekData.daysDdMm.sexta },
+    };
+
+    const updatedPlanning: WeeklyPlanning = {
+      ...currentPlanning,
+      startDate: weekData.startDateIso,
+      endDate: weekData.endDateIso,
+      week: currentPlanning.week && !currentPlanning.week.startsWith('Nova Semana') && !currentPlanning.week.startsWith('Semana ')
+        ? currentPlanning.week 
+        : weekData.weekLabel,
+      days: updatedDays,
+      updatedAt: new Date().toISOString()
+    };
+
+    onChangePlanning(updatedPlanning);
+    setToastMessage('Datas da semana calculadas e preenchidas de Segunda a Sexta!');
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
   // Helper for current day
   const currentDay = currentPlanning.days[activeDayKey] || {
     dayName: DAY_LABELS[activeDayKey],
@@ -650,9 +681,18 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
           </div>
           <div>
             <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+              {currentPlanning.schoolName || settings?.schoolName ? `${currentPlanning.schoolName || settings?.schoolName} • ` : ''}
               {currentPlanning.className || 'Nova Turma'} – {currentPlanning.week || 'Semana'}
             </h1>
-            <div className="text-xs flex items-center gap-2 mt-0.5">
+            <div className="text-xs flex flex-wrap items-center gap-2 mt-0.5">
+              <span className="text-slate-500 dark:text-slate-400">
+                Profe: <strong className="text-slate-700 dark:text-slate-200">{currentPlanning.teacher || settings?.teacherName || 'Professor(a)'}</strong>
+              </span>
+              {currentPlanning.startDate && (
+                <span className="text-slate-400 dark:text-slate-500">
+                  ({currentPlanning.startDate} a {currentPlanning.endDate})
+                </span>
+              )}
               {isDirty ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
                   <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
@@ -728,12 +768,49 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
 
       {/* General Information Header Form */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-          <Calendar className="w-4 h-4 text-blue-600" />
-          <span>Informações Gerais do Planejamento</span>
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            <span>Informações Gerais do Planejamento</span>
+          </h2>
+
+          <button
+            id="planning-auto-recalculate-dates-btn"
+            type="button"
+            onClick={() => handleAutoRecalculateDates()}
+            className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+            title="Calcular e preencher automaticamente as datas de Segunda a Sexta no cabeçalho e nos dias da semana"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>Corrigir / Atualizar Datas da Semana</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Escola / Instituição</label>
+            <input 
+              id="planning-school-input"
+              type="text"
+              value={currentPlanning.schoolName || ''}
+              onChange={(e) => updateGeneralField('schoolName', e.target.value)}
+              placeholder={settings?.schoolName || "Ex: Escola de Educação Infantil"}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Professor(a)</label>
+            <input 
+              id="planning-teacher-input"
+              type="text"
+              value={currentPlanning.teacher || ''}
+              onChange={(e) => updateGeneralField('teacher', e.target.value)}
+              placeholder={settings?.teacherName || "Profe Camila"}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            />
+          </div>
+
           <div>
             <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Turma</label>
             <input 
@@ -757,28 +834,46 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
               className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Professor(a)</label>
-            <input 
-              id="planning-teacher-input"
-              type="text"
-              value={currentPlanning.teacher}
-              onChange={(e) => updateGeneralField('teacher', e.target.value)}
-              placeholder="Profe Camila"
-              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Semana</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Semana (Título/Identificação)</label>
             <input 
               id="planning-week-input"
               type="text"
               value={currentPlanning.week}
               onChange={(e) => updateGeneralField('week', e.target.value)}
-              placeholder="Ex: 27 à 31 de julho"
-              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Semana 33 (10/08 à 14/08)"
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Data Inicial (Segunda-feira)</label>
+            <input 
+              id="planning-start-date-input"
+              type="date"
+              value={currentPlanning.startDate || ''}
+              onChange={(e) => {
+                const newStart = e.target.value;
+                updateGeneralField('startDate', newStart);
+                if (newStart) {
+                  handleAutoRecalculateDates(newStart);
+                }
+              }}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Data Final (Sexta-feira)</label>
+            <input 
+              id="planning-end-date-input"
+              type="date"
+              value={currentPlanning.endDate || ''}
+              onChange={(e) => updateGeneralField('endDate', e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
             />
           </div>
         </div>

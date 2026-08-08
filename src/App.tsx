@@ -44,6 +44,7 @@ import { AiAssistantModal } from './components/AiAssistantModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { PwaReloadPrompt } from './components/PwaReloadPrompt';
 import { LoginGate } from './components/LoginGate';
+import { getWeekDates } from './lib/dateUtils';
 import { WifiOff } from 'lucide-react';
 
 export default function App() {
@@ -170,6 +171,18 @@ export default function App() {
     }
   };
 
+  // Load local settings on initial mount
+  useEffect(() => {
+    const saved = localStorage.getItem('schoolSettings');
+    if (saved) {
+      try {
+        setSettings(JSON.parse(saved));
+      } catch (e) {
+        console.warn("Error parsing schoolSettings from localStorage:", e);
+      }
+    }
+  }, []);
+
   // Firebase Auth Listener & Firestore Data Fetching
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
@@ -182,6 +195,19 @@ export default function App() {
           isAnonymous: firebaseUser.isAnonymous
         };
         setUser(uProfile);
+
+        // Fetch School Settings from Firestore
+        try {
+          const settingsQuery = query(collection(db, 'settings'), where('userId', '==', firebaseUser.uid));
+          const settingsSnap = await getDocs(settingsQuery);
+          if (!settingsSnap.empty) {
+            const fetchedSettings = settingsSnap.docs[0].data() as SchoolSettings;
+            setSettings(fetchedSettings);
+            localStorage.setItem('schoolSettings', JSON.stringify(fetchedSettings));
+          }
+        } catch (e) {
+          console.warn("Could not fetch user settings from Firestore:", e);
+        }
 
         // Load Firestore User Plannings
         try {
@@ -274,27 +300,54 @@ export default function App() {
     }
   };
 
-  // New Fresh Planning Creation
+  // Save School Settings
+  const handleSaveSettings = async (newSettings: SchoolSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('schoolSettings', JSON.stringify(newSettings));
+
+    if (user && db) {
+      try {
+        await setDoc(doc(db, 'settings', user.uid), newSettings, { merge: true });
+      } catch (err) {
+        console.warn("Error saving settings to Firestore:", err);
+      }
+    }
+
+    if (currentPlanning) {
+      const updated = {
+        ...currentPlanning,
+        schoolName: newSettings.schoolName || currentPlanning.schoolName,
+        teacher: newSettings.teacherName || currentPlanning.teacher,
+        className: currentPlanning.className || newSettings.defaultClass
+      };
+      setCurrentPlanning(updated);
+      setPlannings(prev => prev.map(p => p.id === updated.id ? updated : p));
+    }
+  };
+
+  // New Fresh Planning Creation with automated ISO week and Monday-Friday dates
   const handleCreateNewPlanning = () => {
+    const weekData = getWeekDates();
     const newPlanning: WeeklyPlanning = {
       id: `planning-${Date.now()}`,
       userId: user?.uid || 'default-user',
+      schoolName: settings?.schoolName || 'Escola de Educação Infantil Cristão de Curitiba',
       className: settings?.defaultClass || 'KINDER 3',
-      year: new Date().getFullYear().toString(),
+      year: new Date(weekData.monday).getFullYear().toString(),
       teacher: settings?.teacherName || 'Profe Camila',
       period: 'Vespertino',
-      week: 'Nova Semana',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
+      week: weekData.weekLabel,
+      startDate: weekData.startDateIso,
+      endDate: weekData.endDateIso,
       generalTheme: 'Novo Tema Geral',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       days: {
-        segunda: { dayName: 'Segunda-feira', dateStr: '', routine: [], lessons: [] },
-        terca: { dayName: 'Terça-feira', dateStr: '', routine: [], lessons: [] },
-        quarta: { dayName: 'Quarta-feira', dateStr: '', routine: [], lessons: [] },
-        quinta: { dayName: 'Quinta-feira', dateStr: '', routine: [], lessons: [] },
-        sexta: { dayName: 'Sexta-feira', dateStr: '', routine: [], lessons: [] }
+        segunda: { dayName: 'Segunda-feira', dateStr: weekData.daysDdMm.segunda, routine: [], lessons: [] },
+        terca: { dayName: 'Terça-feira', dateStr: weekData.daysDdMm.terca, routine: [], lessons: [] },
+        quarta: { dayName: 'Quarta-feira', dateStr: weekData.daysDdMm.quarta, routine: [], lessons: [] },
+        quinta: { dayName: 'Quinta-feira', dateStr: weekData.daysDdMm.quinta, routine: [], lessons: [] },
+        sexta: { dayName: 'Sexta-feira', dateStr: weekData.daysDdMm.sexta, routine: [], lessons: [] }
       }
     };
     setPlannings([newPlanning, ...plannings]);
@@ -504,7 +557,7 @@ export default function App() {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
         settings={settings}
-        onSaveSettings={(newSettings) => setSettings(newSettings)}
+        onSaveSettings={handleSaveSettings}
       />
 
       <AiAssistantModal

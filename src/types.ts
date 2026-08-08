@@ -63,6 +63,7 @@ export interface DayPlanning {
 export interface WeeklyPlanning {
   id: string;
   userId: string;
+  schoolName?: string; // e.g., "Escola de Educação Infantil Cristão de Curitiba"
   className: string; // e.g., "KINDER 3"
   year: string; // e.g., "2026"
   teacher: string; // e.g., "Profe Camila"

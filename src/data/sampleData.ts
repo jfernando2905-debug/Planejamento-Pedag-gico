@@ -3,6 +3,7 @@ import { WeeklyPlanning, SavedLesson, Story, Song, Game } from '../types';
 export const SAMPLE_PLANNING: WeeklyPlanning = {
   id: 'planning-sample-1',
   userId: 'default-user',
+  schoolName: 'Escola de Educação Infantil Cristão de Curitiba',
   className: 'KINDER 3',
   year: '2026',
   teacher: 'Profe Camila',
