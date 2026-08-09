@@ -1,16 +1,19 @@
 import { WeeklyPlanning, SavedLesson, Story, Song, Game } from '../types';
+import { getWeekDates } from '../lib/dateUtils';
+
+const initialWeek = getWeekDates();
 
 export const SAMPLE_PLANNING: WeeklyPlanning = {
   id: 'planning-sample-1',
   userId: 'default-user',
   schoolName: 'Escola de Educação Infantil Cristão de Curitiba',
   className: 'KINDER 3',
-  year: '2026',
+  year: new Date(initialWeek.monday).getFullYear().toString(),
   teacher: 'Profe Camila',
   period: 'Vespertino',
-  week: 'Semana 26',
-  startDate: '2026-07-27',
-  endDate: '2026-07-31',
+  week: initialWeek.weekLabel,
+  startDate: initialWeek.startDateIso,
+  endDate: initialWeek.endDateIso,
   generalTheme: 'Lembranças das Férias, Numeral 6 e Meios de Transporte',
   project: 'Projeto Identidade e Descobrimentos',
   bookWorked: 'A menina e o Barquinho',
@@ -20,7 +23,7 @@ export const SAMPLE_PLANNING: WeeklyPlanning = {
   days: {
     segunda: {
       dayName: 'Segunda-feira',
-      dateStr: '27/07',
+      dateStr: initialWeek.daysDdMm.segunda,
       subHeader: 'PEDAGÓGICA',
       routine: [
         {
@@ -84,7 +87,7 @@ export const SAMPLE_PLANNING: WeeklyPlanning = {
     },
     terca: {
       dayName: 'Terça-feira',
-      dateStr: '28/07',
+      dateStr: initialWeek.daysDdMm.terca,
       routine: [
         {
           id: 'r-ter-1',
@@ -132,7 +135,7 @@ export const SAMPLE_PLANNING: WeeklyPlanning = {
     },
     quarta: {
       dayName: 'Quarta-feira',
-      dateStr: '29/07',
+      dateStr: initialWeek.daysDdMm.quarta,
       routine: [
         {
           id: 'r-qua-1',
@@ -179,7 +182,7 @@ export const SAMPLE_PLANNING: WeeklyPlanning = {
     },
     quinta: {
       dayName: 'Quinta-feira',
-      dateStr: '30/07',
+      dateStr: initialWeek.daysDdMm.quinta,
       routine: [
         {
           id: 'r-qui-1',
@@ -214,7 +217,7 @@ export const SAMPLE_PLANNING: WeeklyPlanning = {
     },
     sexta: {
       dayName: 'Sexta-feira',
-      dateStr: '31/07',
+      dateStr: initialWeek.daysDdMm.sexta,
       routine: [
         {
           id: 'r-sex-1',

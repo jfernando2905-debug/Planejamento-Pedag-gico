@@ -111,7 +111,7 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Listen for PWA Install Event & Auto-prompt on load
+  // Listen for PWA Install Event & Auto-prompt on FIRST load only
   useEffect(() => {
     const isStandalone = 
       window.matchMedia('(display-mode: standalone)').matches || 
@@ -122,17 +122,23 @@ export default function App() {
       return;
     }
 
+    const hasBeenShown = localStorage.getItem('pwa_modal_shown_v1');
+
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
       (window as any).deferredPwaPrompt = e;
-      setPwaModalOpen(true);
+      if (!hasBeenShown) {
+        setPwaModalOpen(true);
+        localStorage.setItem('pwa_modal_shown_v1', 'true');
+      }
     };
 
     const handleAppInstalled = () => {
       setInstallPrompt(null);
       (window as any).deferredPwaPrompt = null;
       setPwaModalOpen(false);
+      localStorage.setItem('pwa_modal_shown_v1', 'true');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -142,16 +148,20 @@ export default function App() {
       setInstallPrompt((window as any).deferredPwaPrompt);
     }
 
-    const timer = setTimeout(() => {
-      if (!isStandalone) {
-        setPwaModalOpen(true);
-      }
-    }, 1000);
+    let timer: NodeJS.Timeout | null = null;
+    if (!hasBeenShown) {
+      timer = setTimeout(() => {
+        if (!isStandalone) {
+          setPwaModalOpen(true);
+          localStorage.setItem('pwa_modal_shown_v1', 'true');
+        }
+      }, 1000);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     };
   }, []);
 

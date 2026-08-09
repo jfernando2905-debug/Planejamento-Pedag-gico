@@ -32,6 +32,7 @@ interface NavbarProps {
   setDarkMode: (val: boolean) => void;
   installPrompt: any;
   onInstallPwa: () => void;
+  onNewPlanning?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -47,6 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setDarkMode,
   installPrompt,
   onInstallPwa,
+  onNewPlanning,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -67,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 CCC Planejamento
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                KINDER GARTEN
+                Educação Infantil BNCC
               </div>
             </div>
           </div>
@@ -172,7 +174,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             id="nav-tab-novo-planejamento"
-            onClick={() => setActiveTab('novo-planejamento')}
+            onClick={() => {
+              if (onNewPlanning) {
+                onNewPlanning();
+              } else {
+                setActiveTab('novo-planejamento');
+              }
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
               activeTab === 'novo-planejamento'
                 ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'

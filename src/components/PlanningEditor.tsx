@@ -497,30 +497,31 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
 
   // Recalculate and auto-populate week dates for Monday-Friday
   const handleAutoRecalculateDates = (customStartDate?: string) => {
-    const refDateStr = customStartDate || currentPlanning.startDate;
+    const refDateStr = customStartDate || currentPlanning.startDate || new Date().toISOString().split('T')[0];
     const weekData = getWeekDatesFromStartDate(refDateStr);
 
+    const safeDays = currentPlanning.days || {};
+
     const updatedDays = {
-      segunda: { ...currentPlanning.days.segunda, dateStr: weekData.daysDdMm.segunda },
-      terca: { ...currentPlanning.days.terca, dateStr: weekData.daysDdMm.terca },
-      quarta: { ...currentPlanning.days.quarta, dateStr: weekData.daysDdMm.quarta },
-      quinta: { ...currentPlanning.days.quinta, dateStr: weekData.daysDdMm.quinta },
-      sexta: { ...currentPlanning.days.sexta, dateStr: weekData.daysDdMm.sexta },
+      segunda: { ...(safeDays.segunda || { dayName: 'Segunda-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.segunda },
+      terca: { ...(safeDays.terca || { dayName: 'Terça-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.terca },
+      quarta: { ...(safeDays.quarta || { dayName: 'Quarta-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.quarta },
+      quinta: { ...(safeDays.quinta || { dayName: 'Quinta-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.quinta },
+      sexta: { ...(safeDays.sexta || { dayName: 'Sexta-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.sexta },
     };
 
     const updatedPlanning: WeeklyPlanning = {
       ...currentPlanning,
       startDate: weekData.startDateIso,
       endDate: weekData.endDateIso,
-      week: currentPlanning.week && !currentPlanning.week.startsWith('Nova Semana') && !currentPlanning.week.startsWith('Semana ')
-        ? currentPlanning.week 
-        : weekData.weekLabel,
+      year: new Date(weekData.monday).getFullYear().toString(),
+      week: weekData.weekLabel,
       days: updatedDays,
       updatedAt: new Date().toISOString()
     };
 
     onChangePlanning(updatedPlanning);
-    setToastMessage('Datas da semana calculadas e preenchidas de Segunda a Sexta!');
+    setToastMessage(`Datas atualizadas (${weekData.daysDdMm.segunda} a ${weekData.daysDdMm.sexta})!`);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
@@ -891,9 +892,10 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
               value={currentPlanning.startDate || ''}
               onChange={(e) => {
                 const newStart = e.target.value;
-                updateGeneralField('startDate', newStart);
                 if (newStart) {
                   handleAutoRecalculateDates(newStart);
+                } else {
+                  updateGeneralField('startDate', '');
                 }
               }}
               className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
