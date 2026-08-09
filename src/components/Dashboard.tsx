@@ -160,7 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-blue-100 mb-4 border border-white/20">
             <Award className="w-3.5 h-3.5 text-yellow-300" />
-            <span>Educação Infantil • PWA + BNCC 2026</span>
+            <span>Educação Infantil</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-3">

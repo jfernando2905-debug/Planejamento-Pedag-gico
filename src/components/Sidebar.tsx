@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               CCC Planejamento
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold tracking-tight">
-              Educação Infantil BNCC
+              Educação Infantil CCC
             </div>
           </div>
         </div>

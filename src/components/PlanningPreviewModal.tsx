@@ -345,7 +345,7 @@ export const PlanningPreviewModal: React.FC<PlanningPreviewModalProps> = ({
 
             {/* Document Footer */}
             <div className="pt-6 border-t border-slate-300 flex justify-between items-center text-xs text-slate-500">
-              <p>Gerado por Planejamento Pedagógico BNCC</p>
+              <p>Gerado por Planejamento Pedagógico CCC</p>
               <p>Assinatura do(a) Professor(a): ___________________________</p>
             </div>
           </div>
