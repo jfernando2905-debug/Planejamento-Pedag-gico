@@ -12,6 +12,7 @@ import {
   ImageRun
 } from 'docx';
 import { WeeklyPlanning, SchoolSettings } from '../types';
+import { formatIsoToBrDate } from './dateUtils';
 
 async function getImageArrayBufferAndSize(src: string): Promise<{ buffer: ArrayBuffer; width: number; height: number; type: 'png' | 'jpg' } | null> {
   if (!src) return null;
@@ -99,7 +100,7 @@ export async function generatePlanningDOCX(planning: WeeklyPlanning, settings?: 
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: `${planning.className} – ${planning.year}`,
+          text: `${planning.className} – ${planning.year} | Turno: ${planning.period || settings?.defaultPeriod || 'Vespertino'}`,
           bold: true,
           size: 24,
           color: '0F172A'
@@ -110,7 +111,7 @@ export async function generatePlanningDOCX(planning: WeeklyPlanning, settings?: 
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: `Planejamento: ${planning.week} (${planning.startDate || ''} a ${planning.endDate || ''}) | Professor(a): ${teacherName}`,
+          text: `Planejamento: ${planning.week} (${formatIsoToBrDate(planning.startDate || '')} a ${formatIsoToBrDate(planning.endDate || '')}) | Professor(a): ${teacherName}`,
           italics: true,
           size: 20,
           color: '475569'

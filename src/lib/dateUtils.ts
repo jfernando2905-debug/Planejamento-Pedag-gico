@@ -17,6 +17,18 @@ export function formatDateToDdMm(date: Date): string {
   return `${day}/${month}`;
 }
 
+// Helper to format ISO date string (YYYY-MM-DD) to Brazilian format DD/MM/YYYY
+export function formatIsoToBrDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day}/${month}/${year}`;
+  }
+  return trimmed;
+}
+
 // Helper to calculate ISO Week number of the year
 export function getWeekNumber(d: Date): number {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));

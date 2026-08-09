@@ -67,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 CCC Planejamento
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Educação Infantil BNCC
+                KINDER GARTEN
               </div>
             </div>
           </div>

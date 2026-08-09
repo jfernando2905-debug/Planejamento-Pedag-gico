@@ -23,6 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [state, setState] = useState('');
   const [phone, setPhone] = useState('');
   const [defaultClass, setDefaultClass] = useState('');
+  const [defaultPeriod, setDefaultPeriod] = useState('Vespertino');
 
   useEffect(() => {
     if (settings) {
@@ -33,6 +34,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setState(settings.state || '');
       setPhone(settings.phone || '');
       setDefaultClass(settings.defaultClass || '');
+      setDefaultPeriod(settings.defaultPeriod || 'Vespertino');
     }
   }, [settings, isOpen]);
 
@@ -48,7 +50,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       city,
       state,
       phone,
-      defaultClass
+      defaultClass,
+      defaultPeriod
     });
     onClose();
   };
@@ -112,7 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Nome do(a) Professor(a)
@@ -142,6 +145,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 placeholder="KINDER 3"
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Turno / Período
+              </label>
+              <select
+                id="settings-default-period"
+                value={defaultPeriod}
+                onChange={(e) => setDefaultPeriod(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+              >
+                <option value="Vespertino">Vespertino (Tarde)</option>
+                <option value="Matutino">Matutino (Manhã)</option>
+                <option value="Integral">Integral</option>
+                <option value="Noturno">Noturno</option>
+              </select>
             </div>
           </div>
 

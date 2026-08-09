@@ -18,7 +18,7 @@ import {
   FileCheck,
   Award
 } from 'lucide-react';
-import { WeeklyPlanning, SavedLesson, Story, Song, Game, BibleLesson } from '../types';
+import { WeeklyPlanning, SavedLesson, Story, Song, Game, BibleLesson, SchoolSettings } from '../types';
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
@@ -28,6 +28,7 @@ interface DashboardProps {
   songs: Song[];
   games: Game[];
   bibleLessons?: BibleLesson[];
+  settings?: SchoolSettings | null;
   onOpenAiAssistant: () => void;
   onOpenSettings: () => void;
   onSelectPlanning: (planning: WeeklyPlanning) => void;
@@ -42,6 +43,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   songs,
   games,
   bibleLessons = [],
+  settings,
   onOpenAiAssistant,
   onOpenSettings,
   onSelectPlanning,
@@ -282,7 +284,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                    {p.generalTheme || 'Sem tema cadastrado'} • {p.teacher}
+                    {p.generalTheme || 'Sem tema cadastrado'} • {p.teacher || settings?.teacherName || 'Professor(a)'} ({p.period || settings?.defaultPeriod || 'Vespertino'})
                   </div>
                 </div>
 

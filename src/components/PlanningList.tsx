@@ -17,6 +17,7 @@ import { WeeklyPlanning, SchoolSettings } from '../types';
 import { generatePlanningPDF } from '../lib/pdfExport';
 import { generatePlanningDOCX } from '../lib/docxExport';
 import { PlanningPreviewModal } from './PlanningPreviewModal';
+import { formatIsoToBrDate } from '../lib/dateUtils';
 
 interface PlanningListProps {
   plannings: WeeklyPlanning[];
@@ -175,8 +176,8 @@ export const PlanningList: React.FC<PlanningListProps> = ({
                 </p>
 
                 <div className="text-[11px] text-slate-500 dark:text-slate-500 space-y-0.5">
-                  <div>Profe: <span className="font-semibold">{p.teacher}</span></div>
-                  {p.startDate && <div>Período: {p.startDate} a {p.endDate}</div>}
+                  <div>Profe: <span className="font-semibold">{p.teacher || settings?.teacherName || 'Professor(a)'}</span> • Turno: <span className="font-semibold">{p.period || settings?.defaultPeriod || 'Vespertino'}</span></div>
+                  {p.startDate && <div>Período: {formatIsoToBrDate(p.startDate)} a {formatIsoToBrDate(p.endDate)}</div>}
                 </div>
               </div>
 

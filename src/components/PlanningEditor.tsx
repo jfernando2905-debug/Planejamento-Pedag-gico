@@ -32,7 +32,7 @@ import {
   ListChecks,
   RefreshCw
 } from 'lucide-react';
-import { getWeekDatesFromStartDate, buildDefaultRoutineForDay } from '../lib/dateUtils';
+import { getWeekDatesFromStartDate, buildDefaultRoutineForDay, formatIsoToBrDate } from '../lib/dateUtils';
 import { 
   WeeklyPlanning, 
   DayPlanning, 
@@ -707,9 +707,12 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
               <span className="text-slate-500 dark:text-slate-400">
                 Profe: <strong className="text-slate-700 dark:text-slate-200">{currentPlanning.teacher || settings?.teacherName || 'Professor(a)'}</strong>
               </span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">
+                • Turno: <strong className="text-slate-700 dark:text-slate-200">{currentPlanning.period || settings?.defaultPeriod || 'Vespertino'}</strong>
+              </span>
               {currentPlanning.startDate && (
                 <span className="text-slate-400 dark:text-slate-500">
-                  ({currentPlanning.startDate} a {currentPlanning.endDate})
+                  ({formatIsoToBrDate(currentPlanning.startDate)} a {formatIsoToBrDate(currentPlanning.endDate)})
                 </span>
               )}
               {isDirty ? (
@@ -805,7 +808,7 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
           <div>
             <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Escola / Instituição</label>
             <input 
@@ -839,6 +842,18 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
               onChange={(e) => updateGeneralField('className', e.target.value)}
               placeholder="Ex: KINDER 3"
               className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Turno / Período</label>
+            <input 
+              id="planning-period-input"
+              type="text"
+              value={currentPlanning.period || ''}
+              onChange={(e) => updateGeneralField('period', e.target.value)}
+              placeholder={settings?.defaultPeriod || "Vespertino"}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
           </div>
 

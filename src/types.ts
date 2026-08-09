@@ -15,6 +15,7 @@ export interface SchoolSettings {
   state: string;
   phone?: string;
   defaultClass?: string;
+  defaultPeriod?: string;
 }
 
 export interface BNCCItem {

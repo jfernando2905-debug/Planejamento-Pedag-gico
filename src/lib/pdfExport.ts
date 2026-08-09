@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { WeeklyPlanning, SchoolSettings } from '../types';
+import { formatIsoToBrDate } from './dateUtils';
 
 interface ImageDetails {
   dataUrl: string;
@@ -97,12 +98,12 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(`${planning.className} – ${planning.year}`, textXOffset, margin + 13);
+    doc.text(`${planning.className} – ${planning.year} | Turno: ${planning.period || settings?.defaultPeriod || 'Vespertino'}`, textXOffset, margin + 13);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(`Planejamento: ${planning.week} (${planning.startDate || ''} a ${planning.endDate || ''})`, textXOffset, margin + 19);
+    doc.text(`Planejamento: ${planning.week} (${formatIsoToBrDate(planning.startDate || '')} a ${formatIsoToBrDate(planning.endDate || '')})`, textXOffset, margin + 19);
 
     if (cityState) {
       doc.text(cityState, pageWidth - margin - 5, margin + 7, { align: 'right' });

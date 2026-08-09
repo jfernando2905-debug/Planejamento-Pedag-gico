@@ -318,7 +318,8 @@ export default function App() {
         ...currentPlanning,
         schoolName: newSettings.schoolName || currentPlanning.schoolName,
         teacher: newSettings.teacherName || currentPlanning.teacher,
-        className: currentPlanning.className || newSettings.defaultClass
+        className: currentPlanning.className || newSettings.defaultClass,
+        period: newSettings.defaultPeriod || currentPlanning.period || 'Vespertino'
       };
       setCurrentPlanning(updated);
       setPlannings(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -335,7 +336,7 @@ export default function App() {
       className: settings?.defaultClass || 'KINDER 3',
       year: new Date(weekData.monday).getFullYear().toString(),
       teacher: settings?.teacherName || 'Profe Camila',
-      period: 'Vespertino',
+      period: settings?.defaultPeriod || 'Vespertino',
       week: weekData.weekLabel,
       startDate: weekData.startDateIso,
       endDate: weekData.endDateIso,
@@ -472,6 +473,7 @@ export default function App() {
             songs={songs}
             games={games}
             bibleLessons={bibleLessons}
+            settings={settings}
             onOpenAiAssistant={() => setAiAssistantOpen(true)}
             onOpenSettings={() => setSettingsModalOpen(true)}
             onSelectPlanning={(p) => {

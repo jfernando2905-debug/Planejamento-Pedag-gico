@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Printer, FileDown, FileText, School, User, Calendar, MapPin, Eye } from 'lucide-react';
 import { WeeklyPlanning, SchoolSettings } from '../types';
+import { formatIsoToBrDate } from '../lib/dateUtils';
 
 interface PlanningPreviewModalProps {
   isOpen: boolean;
@@ -162,10 +163,10 @@ export const PlanningPreviewModal: React.FC<PlanningPreviewModalProps> = ({
                     {schoolName}
                   </h1>
                   <h2 className="text-sm font-bold text-slate-800">
-                    Turma: {planning.className} ({planning.year}) – Turno: {planning.period || 'Vespertino'}
+                    Turma: {planning.className} ({planning.year}) – Turno: {planning.period || settings?.defaultPeriod || 'Vespertino'}
                   </h2>
                   <p className="text-xs text-slate-600">
-                    Semana: <span className="font-semibold text-blue-800">{planning.week}</span> ({planning.startDate} a {planning.endDate})
+                    Semana: <span className="font-semibold text-blue-800">{planning.week}</span> ({formatIsoToBrDate(planning.startDate)} a {formatIsoToBrDate(planning.endDate)})
                   </p>
                 </div>
               </div>
