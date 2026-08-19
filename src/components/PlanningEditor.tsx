@@ -33,6 +33,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { getWeekDatesFromStartDate, buildDefaultRoutineForDay, formatIsoToBrDate } from '../lib/dateUtils';
+import { convertPlainTextToHtml } from '../lib/richTextUtils';
 import { 
   WeeklyPlanning, 
   DayPlanning, 
@@ -294,10 +295,12 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
     if (mode === 'title') {
       handleUpdateRoutine(routineId, 'title', selectedValue);
     } else if (mode === 'description') {
+      const presetHtml = convertPlainTextToHtml(selectedValue);
       if (append && currentValue && currentValue.trim().length > 0) {
-        handleUpdateRoutine(routineId, 'description', `${currentValue}\n\n${selectedValue}`);
+        const curHtml = convertPlainTextToHtml(currentValue);
+        handleUpdateRoutine(routineId, 'description', `${curHtml}${presetHtml}`);
       } else {
-        handleUpdateRoutine(routineId, 'description', selectedValue);
+        handleUpdateRoutine(routineId, 'description', presetHtml);
       }
     }
   };
@@ -316,8 +319,8 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
           ? (item.title.toLowerCase().includes(story.title.toLowerCase()) ? item.title : `${item.title}: ${story.title}`)
           : `CONTAÇÃO DE HISTÓRIA: ${story.title}`;
 
-        const storyDetails = `📖 História: "${story.title}" (${story.author || 'Autor desconhecido'})\nSinopse: ${story.description}${story.objectives ? `\nObjetivos: ${story.objectives}` : ''}`;
-        const newDesc = item.description ? `${storyDetails}\n\n${item.description}` : storyDetails;
+        const storyDetails = `<p><strong>📖 História:</strong> "${story.title}" (${story.author || 'Autor desconhecido'})</p><p><strong>Sinopse:</strong> ${story.description}</p>${story.objectives ? `<p><strong>Objetivos:</strong> ${story.objectives}</p>` : ''}`;
+        const newDesc = item.description ? `${storyDetails}<br/>${convertPlainTextToHtml(item.description)}` : storyDetails;
 
         const images = [...(item.images || [])];
         if (story.imageUrl && !images.includes(story.imageUrl)) {
@@ -389,19 +392,20 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
           ? (item.title.toLowerCase().includes(bLesson.title.toLowerCase()) ? item.title : `AULA BÍBLICA: ${bLesson.title}`)
           : `AULA BÍBLICA: ${bLesson.title}`;
 
-        const passageText = bLesson.passage ? `📖 Passagem: ${bLesson.passage}\n` : '';
-        const principleText = bLesson.principle ? `✨ Princípio: ${bLesson.principle}\n` : '';
-        const verseText = bLesson.keyVerse ? `💬 Versículo: "${bLesson.keyVerse}"\n` : '';
-        const objText = bLesson.objectives ? `\n📌 Objetivos:\n${bLesson.objectives}` : '';
-        const matText = bLesson.materials ? `\n🎨 Materiais:\n${bLesson.materials}` : '';
-        const devText = bLesson.development ? `\n📝 Desenvolvimento:\n${bLesson.development}` : '';
+        const passageText = bLesson.passage ? `<p><strong>📖 Passagem:</strong> ${bLesson.passage}</p>` : '';
+        const principleText = bLesson.principle ? `<p><strong>✨ Princípio:</strong> ${bLesson.principle}</p>` : '';
+        const verseText = bLesson.keyVerse ? `<p><strong>💬 Versículo:</strong> "${bLesson.keyVerse}"</p>` : '';
+        const objText = bLesson.objectives ? `<p><strong>📌 Objetivos:</strong></p>${convertPlainTextToHtml(bLesson.objectives)}` : '';
+        const matText = bLesson.materials ? `<p><strong>🎨 Materiais:</strong> ${bLesson.materials}</p>` : '';
+        const devText = bLesson.development ? `<p><strong>📝 Desenvolvimento:</strong></p>${convertPlainTextToHtml(bLesson.development)}` : '';
 
         const fullDesc = `${passageText}${principleText}${verseText}${objText}${matText}${devText}`.trim();
+        const finalDesc = item.description ? `${fullDesc}<br/>${convertPlainTextToHtml(item.description)}` : fullDesc;
 
         return {
           ...item,
           title: newTitle,
-          description: fullDesc,
+          description: finalDesc,
         };
       });
 

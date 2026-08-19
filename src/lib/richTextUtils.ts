@@ -4,27 +4,33 @@ import DOMPurify from 'dompurify';
  * Checks if a string contains HTML tags.
  */
 export function isHtmlString(str: string): boolean {
-  if (!str) return false;
+  if (!str || typeof str !== 'string') return false;
   return /<[a-z][\s\S]*>/i.test(str);
 }
 
 /**
- * Sanitizes HTML content using DOMPurify.
+ * Escapes plain text to safe HTML
  */
-export function sanitizeHtml(html: string): string {
-  if (!html) return '';
-  return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'style', 'class', 'href', 'color'],
-  });
-}
-
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
+  if (!str) return '';
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Sanitizes HTML content using DOMPurify while preserving rich text tags & styles.
+ */
+export function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['mark', 'u', 's', 'del', 'strike', 'span'],
+    ADD_ATTR: ['target', 'style', 'class', 'href', 'color', 'data-color', 'align'],
+    ALLOW_DATA_ATTR: true,
+  });
 }
 
 /**
@@ -58,7 +64,7 @@ export function convertPlainTextToHtml(text: string): string {
         inList = true;
       }
       const itemText = trimmed.replace(/^[-•*]\s*/, '');
-      paragraphs.push(`<li>${escapeHtml(itemText)}</li>`);
+      paragraphs.push(`<li><p>${escapeHtml(itemText)}</p></li>`);
     } else {
       if (inList) {
         paragraphs.push('</ul>');
@@ -76,7 +82,7 @@ export function convertPlainTextToHtml(text: string): string {
 }
 
 /**
- * Converts HTML content or plain text into clean plain text for PDF / DOCX export.
+ * Converts HTML content or plain text into clean plain text for fallback or preview.
  */
 export function stripHtmlToPlainText(content: string): string {
   if (!content) return '';

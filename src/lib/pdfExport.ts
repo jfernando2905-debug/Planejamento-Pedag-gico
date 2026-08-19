@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import { WeeklyPlanning, SchoolSettings } from '../types';
 import { formatIsoToBrDate } from './dateUtils';
-import { stripHtmlToPlainText } from './richTextUtils';
+import { parseHtmlToBlocks, parseColorToRgb } from './richTextExportUtils';
 
 interface ImageDetails {
   dataUrl: string;
@@ -124,6 +124,200 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
 
   addHeader();
 
+  // Helper to render rich text blocks with full formatting into PDF
+  const renderRichText = (
+    htmlOrText: string,
+    indentX: number,
+    maxWidth: number,
+    defaultFontSize = 8.5,
+    defaultRgb: [number, number, number] = [51, 65, 85]
+  ) => {
+    if (!htmlOrText || !htmlOrText.trim()) return;
+    const blocks = parseHtmlToBlocks(htmlOrText);
+
+    for (const block of blocks) {
+      addPageIfNeeded(6);
+
+      const isListItem = block.type === 'list-item';
+      const bulletWidth = isListItem ? 4 : 0;
+      const blockIndent = indentX + bulletWidth;
+      const effectiveWidth = maxWidth - bulletWidth;
+
+      if (isListItem) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(defaultFontSize);
+        doc.setTextColor(defaultRgb[0], defaultRgb[1], defaultRgb[2]);
+        doc.text('•', indentX, y);
+      }
+
+      interface StyledToken {
+        text: string;
+        isNewline: boolean;
+        isSpace: boolean;
+        width: number;
+        bold: boolean;
+        italic: boolean;
+        underline: boolean;
+        strike: boolean;
+        color: [number, number, number];
+        highlight: [number, number, number] | null;
+        fontSize: number;
+      }
+
+      const tokens: StyledToken[] = [];
+
+      for (const run of block.runs) {
+        if (!run.text) continue;
+
+        const isBold = !!run.bold;
+        const isItalic = !!run.italic;
+        const fontStyle = isBold && isItalic ? 'bolditalic' : isBold ? 'bold' : isItalic ? 'italic' : 'normal';
+        const fontSize = run.fontSize || defaultFontSize;
+        const color = parseColorToRgb(run.color) || defaultRgb;
+        const highlight = parseColorToRgb(run.highlight);
+
+        doc.setFont('helvetica', fontStyle);
+        doc.setFontSize(fontSize);
+
+        const rawLines = run.text.split('\n');
+        for (let lIdx = 0; lIdx < rawLines.length; lIdx++) {
+          if (lIdx > 0) {
+            tokens.push({
+              text: '',
+              isNewline: true,
+              isSpace: false,
+              width: 0,
+              bold: isBold,
+              italic: isItalic,
+              underline: !!run.underline,
+              strike: !!run.strike,
+              color,
+              highlight,
+              fontSize,
+            });
+          }
+
+          const lineSegment = rawLines[lIdx];
+          if (!lineSegment) continue;
+
+          const parts = lineSegment.split(/(\s+)/);
+          for (const part of parts) {
+            if (!part) continue;
+            const isSpace = /^\s+$/.test(part);
+            const tokenWidth = doc.getTextWidth(part);
+            tokens.push({
+              text: part,
+              isNewline: false,
+              isSpace,
+              width: tokenWidth,
+              bold: isBold,
+              italic: isItalic,
+              underline: !!run.underline,
+              strike: !!run.strike,
+              color,
+              highlight,
+              fontSize,
+            });
+          }
+        }
+      }
+
+      if (tokens.length === 0) continue;
+
+      const lines: StyledToken[][] = [];
+      let currentLine: StyledToken[] = [];
+      let currentLineWidth = 0;
+
+      for (const token of tokens) {
+        if (token.isNewline) {
+          lines.push(currentLine);
+          currentLine = [];
+          currentLineWidth = 0;
+          continue;
+        }
+
+        if (currentLine.length === 0 && token.isSpace) {
+          continue;
+        }
+
+        if (currentLineWidth + token.width <= effectiveWidth || currentLine.length === 0) {
+          currentLine.push(token);
+          currentLineWidth += token.width;
+        } else {
+          lines.push(currentLine);
+          if (token.isSpace) {
+            currentLine = [];
+            currentLineWidth = 0;
+          } else {
+            currentLine = [token];
+            currentLineWidth = token.width;
+          }
+        }
+      }
+
+      if (currentLine.length > 0) {
+        lines.push(currentLine);
+      }
+
+      const lineHeight = defaultFontSize * 0.48;
+
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const lineTokens = lines[lineIndex];
+        if (lineTokens.length === 0) {
+          y += lineHeight;
+          addPageIfNeeded(lineHeight + 2);
+          continue;
+        }
+
+        const totalLineWidth = lineTokens.reduce((sum, t) => sum + t.width, 0);
+
+        let startX = blockIndent;
+        if (block.align === 'center') {
+          startX = blockIndent + Math.max(0, (effectiveWidth - totalLineWidth) / 2);
+        } else if (block.align === 'right') {
+          startX = blockIndent + Math.max(0, effectiveWidth - totalLineWidth);
+        }
+
+        addPageIfNeeded(lineHeight + 2);
+        let curX = startX;
+
+        for (const token of lineTokens) {
+          const fontStyle = token.bold && token.italic ? 'bolditalic' : token.bold ? 'bold' : token.italic ? 'italic' : 'normal';
+          doc.setFont('helvetica', fontStyle);
+          doc.setFontSize(token.fontSize);
+          doc.setTextColor(token.color[0], token.color[1], token.color[2]);
+
+          if (token.highlight) {
+            doc.setFillColor(token.highlight[0], token.highlight[1], token.highlight[2]);
+            doc.rect(curX, y - (token.fontSize * 0.35), token.width, token.fontSize * 0.45, 'F');
+          }
+
+          if (token.text) {
+            doc.text(token.text, curX, y);
+          }
+
+          if (token.underline) {
+            doc.setDrawColor(token.color[0], token.color[1], token.color[2]);
+            doc.setLineWidth(0.2);
+            doc.line(curX, y + 0.5, curX + token.width, y + 0.5);
+          }
+
+          if (token.strike) {
+            doc.setDrawColor(token.color[0], token.color[1], token.color[2]);
+            doc.setLineWidth(0.2);
+            doc.line(curX, y - (token.fontSize * 0.15), curX + token.width, y - (token.fontSize * 0.15));
+          }
+
+          curX += token.width;
+        }
+
+        y += lineHeight;
+      }
+
+      y += 1.5;
+    }
+  };
+
   // General Summary Box if exists
   if (planning.generalTheme || planning.project || planning.bookWorked) {
     doc.setFillColor(241, 245, 249);
@@ -176,10 +370,7 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
     // Routine Items
     if (day.routine && day.routine.length > 0) {
       for (const r of day.routine) {
-        const descText = stripHtmlToPlainText(r.description || '');
-        const descLines = descText ? doc.splitTextToSize(descText, contentWidth - 8) : [];
-        const itemHeight = 6 + (descLines.length * 4.5);
-        addPageIfNeeded(itemHeight);
+        addPageIfNeeded(10);
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
@@ -187,14 +378,8 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
         doc.text(`• ${r.title} (${r.time})`, margin + 4, y);
         y += 5;
 
-        if (descLines.length > 0) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor(51, 65, 85);
-          descLines.forEach((line: string) => {
-            doc.text(`  ${line}`, margin + 6, y);
-            y += 4.5;
-          });
+        if (r.description) {
+          renderRichText(r.description, margin + 6, contentWidth - 8, 9, [51, 65, 85]);
         }
 
         // Routine Images
@@ -266,16 +451,7 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
           doc.text('Objetivos da Aula:', margin + 4, y);
           y += 4.5;
 
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.5);
-          doc.setTextColor(51, 65, 85);
-          const objText = stripHtmlToPlainText(l.objectives || '');
-          const objLines = doc.splitTextToSize(objText, contentWidth - 10);
-          objLines.forEach((line: string) => {
-            addPageIfNeeded(5);
-            doc.text(line, margin + 8, y);
-            y += 4;
-          });
+          renderRichText(l.objectives, margin + 8, contentWidth - 10, 8.5, [51, 65, 85]);
           y += 2;
         }
 
@@ -288,17 +464,7 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
           doc.text('Desenvolvimento da Aula:', margin + 4, y);
           y += 4.5;
 
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.5);
-          doc.setTextColor(30, 41, 59);
-
-          const devText = stripHtmlToPlainText(l.development || '');
-          const devLines = doc.splitTextToSize(devText, contentWidth - 10);
-          devLines.forEach((line: string) => {
-            addPageIfNeeded(5);
-            doc.text(line, margin + 8, y);
-            y += 4.2;
-          });
+          renderRichText(l.development, margin + 8, contentWidth - 10, 8.5, [30, 41, 59]);
           y += 2;
         }
 
@@ -359,4 +525,3 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
   const fileName = `Planejamento_${planning.className}_${planning.week}.pdf`.replace(/\s+/g, '_');
   doc.save(fileName);
 }
-
