@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { X, Printer, FileDown, FileText, School, User, Calendar, MapPin, Eye } from 'lucide-react';
 import { WeeklyPlanning, SchoolSettings } from '../types';
 import { formatIsoToBrDate } from '../lib/dateUtils';
+import { FormattedContent } from './FormattedContent';
 
 interface PlanningPreviewModalProps {
   isOpen: boolean;
@@ -223,9 +224,7 @@ export const PlanningPreviewModal: React.FC<PlanningPreviewModalProps> = ({
                                 <span>{r.title}</span>
                               </div>
                               {r.description && (
-                                <p className="text-slate-700 mt-1 whitespace-pre-line leading-relaxed">
-                                  {r.description}
-                                </p>
+                                <FormattedContent content={r.description} className="text-slate-700 mt-1 leading-relaxed" />
                               )}
                               {r.images && r.images.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-slate-200">
@@ -256,20 +255,14 @@ export const PlanningPreviewModal: React.FC<PlanningPreviewModalProps> = ({
                             <div key={lesson.id} className="border border-slate-300 rounded-xl p-3 bg-white space-y-2 text-xs">
                               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
                                 <h5 className="font-bold text-sm text-slate-900">
-                                  {lesson.title || 'Atividade sem título'}
+                                  <span className="text-blue-700">{lesson.subject}</span>{lesson.theme ? `: ${lesson.theme}` : ''}
                                 </h5>
-                                {lesson.estimatedTime && (
+                                {lesson.time && (
                                   <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded text-[11px]">
-                                    ⏱️ {lesson.estimatedTime}
+                                    ⏱️ {lesson.time}
                                   </span>
                                 )}
                               </div>
-
-                              {lesson.fieldOfExperience && (
-                                <p className="text-blue-900 font-semibold">
-                                  Campo de Experiência: <span className="text-slate-800 font-normal">{lesson.fieldOfExperience}</span>
-                                </p>
-                              )}
 
                               {lesson.bnccCodes && lesson.bnccCodes.length > 0 && (
                                 <div>
@@ -284,34 +277,24 @@ export const PlanningPreviewModal: React.FC<PlanningPreviewModalProps> = ({
                                 </div>
                               )}
 
-                              {lesson.bnccObjectives && (
+                              {lesson.objectives && (
                                 <div>
-                                  <span className="font-semibold text-slate-900">Objetivos BNCC: </span>
-                                  <span className="text-slate-700">{lesson.bnccObjectives}</span>
+                                  <span className="font-semibold text-slate-900 block mb-0.5">Objetivos:</span>
+                                  <FormattedContent content={lesson.objectives} className="text-slate-700 leading-relaxed bg-slate-50/70 p-2 rounded-lg border border-slate-200/80" />
                                 </div>
                               )}
 
                               {lesson.development && (
                                 <div>
                                   <span className="font-semibold text-slate-900 block mb-0.5">Desenvolvimento / Metodologia:</span>
-                                  <div
-                                    className="text-slate-800 leading-relaxed bg-slate-50/70 p-2 rounded-lg border border-slate-200/80"
-                                    dangerouslySetInnerHTML={{ __html: lesson.development }}
-                                  />
+                                  <FormattedContent content={lesson.development} className="text-slate-800 leading-relaxed bg-slate-50/70 p-2 rounded-lg border border-slate-200/80" />
                                 </div>
                               )}
 
-                              {lesson.resources && (
+                              {lesson.materials && lesson.materials.length > 0 && (
                                 <div>
-                                  <span className="font-semibold text-slate-900">Materiais & Recurso: </span>
-                                  <span className="text-slate-700">{lesson.resources}</span>
-                                </div>
-                              )}
-
-                              {lesson.evaluation && (
-                                <div>
-                                  <span className="font-semibold text-slate-900">Avaliação: </span>
-                                  <span className="text-slate-700">{lesson.evaluation}</span>
+                                  <span className="font-semibold text-slate-900">Materiais & Recursos: </span>
+                                  <span className="text-slate-700">{lesson.materials.join(', ')}</span>
                                 </div>
                               )}
 

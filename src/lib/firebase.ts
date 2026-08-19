@@ -56,6 +56,13 @@ export interface FirestoreErrorInfo {
   };
 }
 
+export function cleanForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  return JSON.parse(JSON.stringify(data));
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),

@@ -15,6 +15,7 @@ import {
 import { SavedLesson } from '../types';
 import { RichTextEditor } from './RichTextEditor';
 import { BnccSelectorModal } from './BnccSelectorModal';
+import { FormattedContent } from './FormattedContent';
 
 interface LessonBankProps {
   lessons: SavedLesson[];
@@ -192,9 +193,10 @@ export const LessonBank: React.FC<LessonBankProps> = ({
               )}
 
               {l.development && (
-                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl">
-                  {l.development}
-                </p>
+                <FormattedContent
+                  content={l.development}
+                  className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl"
+                />
               )}
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">

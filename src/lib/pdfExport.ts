@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { WeeklyPlanning, SchoolSettings } from '../types';
 import { formatIsoToBrDate } from './dateUtils';
+import { stripHtmlToPlainText } from './richTextUtils';
 
 interface ImageDetails {
   dataUrl: string;
@@ -175,7 +176,8 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
     // Routine Items
     if (day.routine && day.routine.length > 0) {
       for (const r of day.routine) {
-        const descLines = r.description ? doc.splitTextToSize(r.description, contentWidth - 8) : [];
+        const descText = stripHtmlToPlainText(r.description || '');
+        const descLines = descText ? doc.splitTextToSize(descText, contentWidth - 8) : [];
         const itemHeight = 6 + (descLines.length * 4.5);
         addPageIfNeeded(itemHeight);
 
@@ -267,7 +269,8 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8.5);
           doc.setTextColor(51, 65, 85);
-          const objLines = doc.splitTextToSize(l.objectives, contentWidth - 10);
+          const objText = stripHtmlToPlainText(l.objectives || '');
+          const objLines = doc.splitTextToSize(objText, contentWidth - 10);
           objLines.forEach((line: string) => {
             addPageIfNeeded(5);
             doc.text(line, margin + 8, y);
@@ -289,7 +292,8 @@ export async function generatePlanningPDF(planning: WeeklyPlanning, settings?: S
           doc.setFontSize(8.5);
           doc.setTextColor(30, 41, 59);
 
-          const devLines = doc.splitTextToSize(l.development, contentWidth - 10);
+          const devText = stripHtmlToPlainText(l.development || '');
+          const devLines = doc.splitTextToSize(devText, contentWidth - 10);
           devLines.forEach((line: string) => {
             addPageIfNeeded(5);
             doc.text(line, margin + 8, y);

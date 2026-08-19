@@ -13,6 +13,7 @@ import {
 } from 'docx';
 import { WeeklyPlanning, SchoolSettings } from '../types';
 import { formatIsoToBrDate } from './dateUtils';
+import { stripHtmlToPlainText } from './richTextUtils';
 
 async function getImageArrayBufferAndSize(src: string): Promise<{ buffer: ArrayBuffer; width: number; height: number; type: 'png' | 'jpg' } | null> {
   if (!src) return null;
@@ -225,7 +226,7 @@ export async function generatePlanningDOCX(planning: WeeklyPlanning, settings?: 
             bullet: { level: 0 },
             children: [
               new TextRun({ text: `${r.title} (${r.time})`, bold: true, size: 20 }),
-              new TextRun({ text: r.description ? `\n${r.description}` : '', size: 18, color: '334155' })
+              new TextRun({ text: r.description ? `\n${stripHtmlToPlainText(r.description)}` : '', size: 18, color: '334155' })
             ]
           })
         );
@@ -291,7 +292,7 @@ export async function generatePlanningDOCX(planning: WeeklyPlanning, settings?: 
             new Paragraph({
               children: [
                 new TextRun({ text: 'Objetivos: ', bold: true, size: 18 }),
-                new TextRun({ text: l.objectives, size: 18 })
+                new TextRun({ text: stripHtmlToPlainText(l.objectives), size: 18 })
               ]
             })
           );
@@ -306,7 +307,7 @@ export async function generatePlanningDOCX(planning: WeeklyPlanning, settings?: 
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: l.development, size: 18 })
+                new TextRun({ text: stripHtmlToPlainText(l.development), size: 18 })
               ]
             })
           );

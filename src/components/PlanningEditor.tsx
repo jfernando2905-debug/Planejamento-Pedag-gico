@@ -500,7 +500,7 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
     const refDateStr = customStartDate || currentPlanning.startDate || new Date().toISOString().split('T')[0];
     const weekData = getWeekDatesFromStartDate(refDateStr);
 
-    const safeDays = currentPlanning.days || {};
+    const safeDays = (currentPlanning.days || {}) as WeeklyPlanning['days'];
 
     const updatedDays = {
       segunda: { ...(safeDays.segunda || { dayName: 'Segunda-feira', routine: [], lessons: [] }), dateStr: weekData.daysDdMm.segunda },
@@ -1218,18 +1218,14 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
                       </div>
                     )}
 
-                    {/* Description Section */}
-                    <div className="space-y-2">
-                      <label htmlFor={`routine-desc-${item.id}`} className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                        Descrição / Atividades da Rotina
-                      </label>
-                      <textarea
-                        id={`routine-desc-${item.id}`}
-                        value={item.description}
-                        onChange={(e) => handleUpdateRoutine(item.id, 'description', e.target.value)}
+                    {/* Description Section with RichTextEditor */}
+                    <div className="space-y-1.5">
+                      <RichTextEditor
+                        label="Descrição / Atividades da Rotina"
+                        value={item.description || ''}
+                        onChange={(val) => handleUpdateRoutine(item.id, 'description', val)}
                         placeholder="- Higienização: Banheiro e água&#10;- Chamada e calendário&#10;- Devocional"
                         rows={2}
-                        className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
                       />
 
                       {/* Bottom Toolbar: Green "Modelos de Descrição" Button on Left, alongside AI / Bank actions */}
@@ -1904,8 +1900,8 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
       <BibleLessonSelectorModal
         isOpen={!!bibleSelectorTarget}
         onClose={() => setBibleSelectorTarget(null)}
-        lessons={bibleLessons}
-        onSelectLesson={handleSelectBibleLessonForTarget}
+        bibleLessons={bibleLessons}
+        onSelectBibleLesson={handleSelectBibleLessonForTarget}
         targetTitle={bibleSelectorTarget?.targetTitle}
       />
 

@@ -13,7 +13,9 @@ import {
   where,
   User,
   handleFirestoreError,
-  OperationType
+  cleanForFirestore,
+  OperationType,
+  signInAnonymously
 } from './lib/firebase';
 import { 
   WeeklyPlanning, 
@@ -230,9 +232,36 @@ export default function App() {
           if (docs.length > 0) {
             setPlannings(docs);
             setCurrentPlanning(docs[0]);
+            localStorage.setItem('local_plannings', JSON.stringify(docs));
+          } else {
+            // Check local storage if Firestore has no records yet
+            const savedLocal = localStorage.getItem('local_plannings');
+            if (savedLocal) {
+              try {
+                const parsed = JSON.parse(savedLocal);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  setPlannings(parsed);
+                  setCurrentPlanning(parsed[0]);
+                }
+              } catch (e) {
+                console.warn("Could not parse local_plannings:", e);
+              }
+            }
           }
         } catch (err) {
           console.log("Firestore fetch fallback:", err);
+          const savedLocal = localStorage.getItem('local_plannings');
+          if (savedLocal) {
+            try {
+              const parsed = JSON.parse(savedLocal);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setPlannings(parsed);
+                setCurrentPlanning(parsed[0]);
+              }
+            } catch (e) {
+              console.warn("Could not parse local_plannings fallback:", e);
+            }
+          }
         }
       } else {
         setUser(null);
@@ -244,33 +273,51 @@ export default function App() {
 
   // Save Planning to Firebase
   const handleSavePlanningFirebase = async (planningToSave: WeeklyPlanning) => {
-    // Local Update first
-    const exists = plannings.some(p => p.id === planningToSave.id);
+    // 1. Ensure user authentication with Firebase
+    let currentAuthUser = auth.currentUser;
+    if (!currentAuthUser) {
+      try {
+        const userCredential = await signInAnonymously(auth);
+        currentAuthUser = userCredential.user;
+      } catch (authErr) {
+        console.warn("Anonymous sign-in during save failed:", authErr);
+      }
+    }
+
+    const activeUid = currentAuthUser?.uid || user?.uid || 'guest-user';
+
+    const planningWithUser: WeeklyPlanning = {
+      ...planningToSave,
+      userId: activeUid,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 2. Update Local React State & LocalStorage
+    const exists = plannings.some(p => p.id === planningWithUser.id);
     let updatedList: WeeklyPlanning[];
     if (exists) {
-      updatedList = plannings.map(p => p.id === planningToSave.id ? planningToSave : p);
+      updatedList = plannings.map(p => p.id === planningWithUser.id ? planningWithUser : p);
     } else {
-      updatedList = [planningToSave, ...plannings];
+      updatedList = [planningWithUser, ...plannings];
     }
     setPlannings(updatedList);
-    setCurrentPlanning(planningToSave);
+    setCurrentPlanning(planningWithUser);
+    localStorage.setItem('local_plannings', JSON.stringify(updatedList));
 
-    // Sync to Firestore if logged in
-    if (user && db) {
+    // 3. Sync to Firestore with clean payload (strips undefined values)
+    if (db && currentAuthUser) {
       try {
-        const docRef = doc(db, 'plannings', planningToSave.id);
-        await setDoc(docRef, {
-          ...planningToSave,
-          userId: user.uid,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+        const cleanedData = cleanForFirestore(planningWithUser);
+        const docRef = doc(db, 'plannings', planningWithUser.id);
+        await setDoc(docRef, cleanedData, { merge: true });
         alert("Planejamento salvo com sucesso no Firebase!");
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.WRITE, `plannings/${planningToSave.id}`);
-        alert("Planejamento salvo localmente no aplicativo!");
+        console.error("Firestore Save Error:", err);
+        handleFirestoreError(err, OperationType.WRITE, `plannings/${planningWithUser.id}`);
+        alert("Planejamento salvo no navegador! (Houve uma divergência com a nuvem, tente novamente)");
       }
     } else {
-      alert("Planejamento salvo no seu navegador!");
+      alert("Planejamento salvo localmente no seu navegador!");
     }
   };
 
@@ -292,6 +339,7 @@ export default function App() {
   const handleDeletePlanning = async (id: string) => {
     const updated = (plannings || []).filter(p => p && p.id !== id);
     setPlannings(updated);
+    localStorage.setItem('local_plannings', JSON.stringify(updated));
 
     if (currentPlanning?.id === id) {
       if (updated.length > 0) {
@@ -301,7 +349,7 @@ export default function App() {
       }
     }
 
-    if (user && db) {
+    if ((auth.currentUser || user) && db) {
       try {
         await deleteDoc(doc(db, 'plannings', id));
       } catch (e) {
@@ -315,9 +363,10 @@ export default function App() {
     setSettings(newSettings);
     localStorage.setItem('schoolSettings', JSON.stringify(newSettings));
 
-    if (user && db) {
+    const activeUid = auth.currentUser?.uid || user?.uid;
+    if (activeUid && db) {
       try {
-        await setDoc(doc(db, 'settings', user.uid), newSettings, { merge: true });
+        await setDoc(doc(db, 'settings', activeUid), cleanForFirestore({ ...newSettings, userId: activeUid }), { merge: true });
       } catch (err) {
         console.warn("Error saving settings to Firestore:", err);
       }
@@ -499,6 +548,7 @@ export default function App() {
             currentPlanning={currentPlanning}
             onChangePlanning={(updated) => {
               setCurrentPlanning(updated);
+              setPlannings(prev => prev.map(p => p.id === updated.id ? updated : p));
             }}
             onDiscardChanges={handleDiscardChanges}
             onSaveFirebase={handleSavePlanningFirebase}
