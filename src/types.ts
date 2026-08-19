@@ -36,6 +36,7 @@ export interface RoutineItem {
   description: string; // e.g., "- Higienização: Banheiro e encher as garrafas\n- Rotina: Chamada, calendário, tempo, quantos somos\n- Devocional."
   order: number;
   images?: string[]; // Attached images/photos of activity
+  storyId?: string; // Optional linked story ID from Story Bank
 }
 
 export interface Lesson {

@@ -49,8 +49,10 @@ import { ImageUploader } from './ImageUploader';
 import { BnccSelectorModal } from './BnccSelectorModal';
 import { PlanningPreviewModal } from './PlanningPreviewModal';
 import { StorySelectorModal } from './StorySelectorModal';
+import { SaveStoryModal } from './SaveStoryModal';
 import { BibleLessonSelectorModal } from './BibleLessonSelectorModal';
 import { RoutinePresetModal } from './RoutinePresetModal';
+import { isStoryRoutine, extractStoryTitleFromRoutine, findDuplicateStory } from '../lib/storyUtils';
 import { generatePlanningPDF } from '../lib/pdfExport';
 import { generatePlanningDOCX } from '../lib/docxExport';
 import { DEFAULT_MATERIALS } from '../data/materialsData';
@@ -64,6 +66,7 @@ interface PlanningEditorProps {
   savedLessons: SavedLesson[];
   onSaveLessonToBank?: (lesson: SavedLesson) => void;
   stories?: Story[];
+  onSaveStoryToBank?: (story: Story) => void;
   bibleLessons?: BibleLesson[];
   onClose?: () => void;
   onDiscardChanges?: () => void;
@@ -102,6 +105,7 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
   savedLessons,
   onSaveLessonToBank,
   stories = [],
+  onSaveStoryToBank,
   bibleLessons = [],
   onClose,
   onDiscardChanges
@@ -115,6 +119,22 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
   const [unsavedModalOpen, setUnsavedModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+
+  // Story Save / Update Modal State
+  const [saveStoryTarget, setSaveStoryTarget] = useState<{
+    routineId?: string;
+    lessonId?: string;
+    initialData: {
+      id?: string;
+      title: string;
+      author?: string;
+      description: string;
+      objectives?: string;
+      ageRange?: string;
+      imageUrl?: string;
+    };
+    isUpdateMode?: boolean;
+  } | null>(null);
   
   // Toast & Import Modal states
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -332,6 +352,7 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
           title: newTitle,
           description: newDesc,
           images,
+          storyId: story.id,
         };
       });
 
@@ -370,6 +391,61 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
     }
 
     setStorySelectorTarget(null);
+  };
+
+  const handleOpenSaveStoryModal = (item: RoutineItem, isUpdateMode = false) => {
+    const suggestedTitle = extractStoryTitleFromRoutine(item.title);
+    const existingStory = (item.storyId && stories.find(s => s.id === item.storyId)) ||
+      findDuplicateStory(stories, suggestedTitle || item.title);
+
+    setSaveStoryTarget({
+      routineId: item.id,
+      initialData: {
+        id: existingStory?.id || item.storyId,
+        title: existingStory?.title || suggestedTitle || item.title || 'Contação de História',
+        author: existingStory?.author || '',
+        description: item.description || existingStory?.description || '',
+        objectives: existingStory?.objectives || '',
+        ageRange: existingStory?.ageRange || currentPlanning.className || settings?.defaultClass || '3 a 5 anos',
+        imageUrl: (item.images && item.images.length > 0 ? item.images[0] : existingStory?.imageUrl) || ''
+      },
+      isUpdateMode
+    });
+  };
+
+  const handleSaveStoryFromModal = (savedStory: Story) => {
+    if (onSaveStoryToBank) {
+      onSaveStoryToBank(savedStory);
+    }
+
+    if (saveStoryTarget?.routineId) {
+      const rId = saveStoryTarget.routineId;
+      const currentDay = currentPlanning.days[activeDayKey];
+      const updatedRoutine = currentDay.routine.map(r => {
+        if (r.id !== rId) return r;
+        const images = [...(r.images || [])];
+        if (savedStory.imageUrl && !images.includes(savedStory.imageUrl)) {
+          images.push(savedStory.imageUrl);
+        }
+        return {
+          ...r,
+          storyId: savedStory.id,
+          images
+        };
+      });
+      const updatedPlanning = {
+        ...currentPlanning,
+        days: {
+          ...currentPlanning.days,
+          [activeDayKey]: { ...currentDay, routine: updatedRoutine }
+        }
+      };
+      onChangePlanning(updatedPlanning);
+    }
+
+    setToastMessage(`História "${savedStory.title}" salva no Banco de Histórias com sucesso!`);
+    setTimeout(() => setToastMessage(''), 4000);
+    setSaveStoryTarget(null);
   };
 
   const [bibleSelectorTarget, setBibleSelectorTarget] = useState<{
@@ -1246,16 +1322,40 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
                             <span>Modelos de Descrição</span>
                           </button>
 
-                          {/conta(ç|c)(ã|a)o|hist(ó|o)ria/i.test(item.title) && (
-                            <button
-                              type="button"
-                              onClick={() => setStorySelectorTarget({ type: 'routine', id: item.id, targetTitle: `Rotina (${item.title || 'Contação de História'})` })}
-                              className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 font-bold text-[11px] flex items-center gap-1.5 border border-amber-500/30 transition-colors"
-                              title="Selecionar uma história do Banco de Histórias"
-                            >
-                              <BookMarked className="w-3.5 h-3.5 text-amber-500" />
-                              <span>Escolher História</span>
-                            </button>
+                          {isStoryRoutine(item.title) && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setStorySelectorTarget({ type: 'routine', id: item.id, targetTitle: `Rotina (${item.title || 'Contação de História'})` })}
+                                className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 font-bold text-[11px] flex items-center gap-1.5 border border-amber-500/30 transition-colors"
+                                title="Selecionar uma história do Banco de Histórias"
+                              >
+                                <BookMarked className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Escolher do Banco</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSaveStoryModal(item, false)}
+                                className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center gap-1.5 shadow-xs transition-colors"
+                                title="Salvar esta história no Banco de Histórias"
+                              >
+                                <FolderPlus className="w-3.5 h-3.5" />
+                                <span>Adicionar ao Banco</span>
+                              </button>
+
+                              {(item.storyId || findDuplicateStory(stories, extractStoryTitleFromRoutine(item.title) || item.title)) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSaveStoryModal(item, true)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold text-[11px] flex items-center gap-1.5 border border-amber-300 dark:border-amber-700 transition-colors"
+                                  title="Atualizar dados desta história no Banco de Histórias"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Atualizar no Banco</span>
+                                </button>
+                              )}
+                            </div>
                           )}
 
                           {/b(í|i)bli|devocional|religi/i.test(item.title) && (
@@ -1890,6 +1990,18 @@ export const PlanningEditor: React.FC<PlanningEditorProps> = ({
         onSelectStory={handleSelectStoryForTarget}
         targetTitle={storySelectorTarget?.targetTitle}
       />
+
+      {/* Save / Update Story to Story Bank Modal */}
+      {saveStoryTarget && (
+        <SaveStoryModal
+          isOpen={!!saveStoryTarget}
+          onClose={() => setSaveStoryTarget(null)}
+          initialData={saveStoryTarget.initialData}
+          stories={stories}
+          onSave={handleSaveStoryFromModal}
+          isUpdateMode={saveStoryTarget.isUpdateMode}
+        />
+      )}
 
       {/* Routine Title and Description Preset Modal */}
       <RoutinePresetModal

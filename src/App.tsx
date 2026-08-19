@@ -183,7 +183,7 @@ export default function App() {
     }
   };
 
-  // Load local settings on initial mount
+  // Load local settings and stories on initial mount
   useEffect(() => {
     const saved = localStorage.getItem('schoolSettings');
     if (saved) {
@@ -191,6 +191,18 @@ export default function App() {
         setSettings(JSON.parse(saved));
       } catch (e) {
         console.warn("Error parsing schoolSettings from localStorage:", e);
+      }
+    }
+
+    const savedStories = localStorage.getItem('local_stories');
+    if (savedStories) {
+      try {
+        const parsed = JSON.parse(savedStories);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStories(parsed);
+        }
+      } catch (e) {
+        console.warn("Error parsing local_stories from localStorage:", e);
       }
     }
   }, []);
@@ -219,6 +231,27 @@ export default function App() {
           }
         } catch (e) {
           console.warn("Could not fetch user settings from Firestore:", e);
+        }
+
+        // Fetch Stories from Firestore
+        try {
+          const storiesSnap = await getDocs(collection(db, 'stories'));
+          if (!storiesSnap.empty) {
+            const fetchedStories: Story[] = [];
+            storiesSnap.forEach(d => {
+              fetchedStories.push({ id: d.id, ...d.data() } as Story);
+            });
+            const combined = [...fetchedStories];
+            SAMPLE_STORIES.forEach(sample => {
+              if (!combined.some(s => s.id === sample.id || s.title.toLowerCase() === sample.title.toLowerCase())) {
+                combined.push(sample);
+              }
+            });
+            setStories(combined);
+            localStorage.setItem('local_stories', JSON.stringify(combined));
+          }
+        } catch (e) {
+          console.warn("Could not fetch stories from Firestore:", e);
         }
 
         // Load Firestore User Plannings
@@ -354,6 +387,50 @@ export default function App() {
         await deleteDoc(doc(db, 'plannings', id));
       } catch (e) {
         handleFirestoreError(e, OperationType.DELETE, `plannings/${id}`);
+      }
+    }
+  };
+
+  // Save / Update Story to Story Bank (with LocalStorage & Firestore sync)
+  const handleSaveStory = async (storyToSave: Story) => {
+    const currentAuthUser = auth.currentUser;
+    const activeUid = currentAuthUser?.uid || user?.uid || 'default-user';
+
+    const storyWithUser: Story = {
+      ...storyToSave,
+      userId: storyToSave.userId || activeUid
+    };
+
+    const currentList = stories || [];
+    const exists = currentList.some(x => x && x.id === storyWithUser.id);
+    const updatedList = exists
+      ? currentList.map(x => x && x.id === storyWithUser.id ? storyWithUser : x)
+      : [storyWithUser, ...currentList];
+
+    setStories(updatedList);
+    localStorage.setItem('local_stories', JSON.stringify(updatedList));
+
+    if (db && currentAuthUser) {
+      try {
+        const docRef = doc(db, 'stories', storyWithUser.id);
+        await setDoc(docRef, cleanForFirestore(storyWithUser), { merge: true });
+      } catch (err) {
+        console.warn("Error saving story to Firestore:", err);
+      }
+    }
+  };
+
+  // Delete Story from Story Bank (with LocalStorage & Firestore sync)
+  const handleDeleteStory = async (id: string) => {
+    const updatedList = (stories || []).filter(s => s && s.id !== id);
+    setStories(updatedList);
+    localStorage.setItem('local_stories', JSON.stringify(updatedList));
+
+    if ((auth.currentUser || user) && db) {
+      try {
+        await deleteDoc(doc(db, 'stories', id));
+      } catch (e) {
+        console.warn("Error deleting story from Firestore:", e);
       }
     }
   };
@@ -559,6 +636,7 @@ export default function App() {
               setLessons([newSaved, ...lessons]);
             }}
             stories={stories}
+            onSaveStoryToBank={handleSaveStory}
             bibleLessons={bibleLessons}
             onClose={() => setActiveTab('planejamentos')}
           />
@@ -594,12 +672,8 @@ export default function App() {
         {activeTab === 'banco-historias' && (
           <StoryBank
             stories={stories || []}
-            onSaveStory={(s) => {
-              const currentList = stories || [];
-              const exists = currentList.some(x => x && x.id === s.id);
-              setStories(exists ? currentList.map(x => x && x.id === s.id ? s : x) : [s, ...currentList]);
-            }}
-            onDeleteStory={(id) => setStories((stories || []).filter(s => s && s.id !== id))}
+            onSaveStory={handleSaveStory}
+            onDeleteStory={handleDeleteStory}
           />
         )}
 
