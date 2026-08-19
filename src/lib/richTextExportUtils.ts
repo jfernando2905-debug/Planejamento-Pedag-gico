@@ -9,6 +9,7 @@ export interface InlineRun {
   color?: string; // e.g. '#2563eb' or 'rgb(37, 99, 235)'
   highlight?: string; // e.g. '#fef08a'
   fontSize?: number; // pt size e.g. 9, 10, 12
+  link?: string;
 }
 
 export interface BlockNode {
@@ -69,7 +70,7 @@ export function parseHtmlToBlocks(htmlOrText: string): BlockNode[] {
 
   const html = convertPlainTextToHtml(htmlOrText);
 
-  if (typeof document === 'undefined') {
+  if (typeof DOMParser === 'undefined' || typeof document === 'undefined') {
     return [{
       type: 'paragraph',
       runs: [{ text: htmlOrText.replace(/<[^>]+>/g, '') }]
@@ -133,11 +134,13 @@ export function parseHtmlToBlocks(htmlOrText: string): BlockNode[] {
       const styleAttr = el.getAttribute('style') || '';
       const parsedStyle = parseStyleString(styleAttr);
 
+      const isLink = tag === 'A';
+      const linkHref = isLink ? (el.getAttribute('href') || undefined) : currentRun.link;
       const isBold = currentRun.bold || tag === 'STRONG' || tag === 'B' || !!parsedStyle.bold;
       const isItalic = currentRun.italic || tag === 'EM' || tag === 'I' || !!parsedStyle.italic;
-      const isUnderline = currentRun.underline || tag === 'U' || !!parsedStyle.underline;
+      const isUnderline = currentRun.underline || tag === 'U' || isLink || !!parsedStyle.underline;
       const isStrike = currentRun.strike || tag === 'S' || tag === 'DEL' || tag === 'STRIKE' || !!parsedStyle.strike;
-      const color = parsedStyle.color || el.getAttribute('color') || currentRun.color;
+      const color = parsedStyle.color || el.getAttribute('color') || (isLink ? '#2563eb' : currentRun.color);
       const highlight = parsedStyle.highlight || el.getAttribute('data-color') || (tag === 'MARK' ? '#fef08a' : currentRun.highlight);
       const fontSize = parsedStyle.fontSize || currentRun.fontSize;
 
@@ -150,6 +153,7 @@ export function parseHtmlToBlocks(htmlOrText: string): BlockNode[] {
         color,
         highlight,
         fontSize,
+        link: linkHref,
       };
 
       for (let i = 0; i < el.childNodes.length; i++) {
@@ -172,6 +176,26 @@ export function parseHtmlToBlocks(htmlOrText: string): BlockNode[] {
   function processElementNode(el: HTMLElement) {
     const tag = el.tagName.toUpperCase();
     const align = getAlignmentFromEl(el);
+
+    // Check if it's a wrapper container with block children
+    const hasBlockChildren = Array.from(el.children).some(c => 
+      ['P', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'BLOCKQUOTE', 'DIV', 'SECTION'].includes(c.tagName.toUpperCase())
+    );
+
+    if (hasBlockChildren && (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE')) {
+      el.childNodes.forEach(c => {
+        if (c.nodeType === Node.ELEMENT_NODE) {
+          processElementNode(c as HTMLElement);
+        } else if (c.nodeType === Node.TEXT_NODE && c.textContent?.trim()) {
+          blocks.push({
+            type: 'paragraph',
+            align,
+            runs: [{ text: c.textContent.replace(/\u00a0/g, ' ') }]
+          });
+        }
+      });
+      return;
+    }
 
     if (tag === 'UL' || tag === 'OL') {
       const items = el.querySelectorAll(':scope > li');
