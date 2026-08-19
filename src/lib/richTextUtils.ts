@@ -26,7 +26,11 @@ export function escapeHtml(str: string): string {
  */
 export function sanitizeHtml(html: string): string {
   if (!html) return '';
-  return DOMPurify.sanitize(html, {
+  if (typeof window === 'undefined') {
+    return html;
+  }
+  const purify = typeof DOMPurify.sanitize === 'function' ? DOMPurify : (DOMPurify as any)(window);
+  return purify.sanitize(html, {
     ADD_TAGS: ['mark', 'u', 's', 'del', 'strike', 'span'],
     ADD_ATTR: ['target', 'style', 'class', 'href', 'color', 'data-color', 'align'],
     ALLOW_DATA_ATTR: true,
